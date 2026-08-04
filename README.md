@@ -15,7 +15,14 @@
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=zubair-trabzada/geo-seo-claude&type=Date)](https://www.star-history.com/#zubair-trabzada/geo-seo-claude&Date)
+<a href="https://github.com/zubair-trabzada/geo-seo-claude/stargazers">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/star-history-dark.svg">
+    <img alt="Star History Chart" src="assets/star-history.svg">
+  </picture>
+</a>
+
+<sub>Chart is generated in-repo by a [daily GitHub Action](.github/workflows/star-history.yml) — no third-party chart service, no tokens.</sub>
 
 ---
 
