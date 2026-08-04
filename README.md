@@ -15,7 +15,12 @@
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=zubair-trabzada/geo-seo-claude&type=Date)](https://www.star-history.com/#zubair-trabzada/geo-seo-claude&Date)
+<a href="https://www.star-history.com/#zubair-trabzada/geo-seo-claude&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/star-history-dark.svg">
+    <img alt="Star History Chart" src="assets/star-history.svg">
+  </picture>
+</a>
 
 ---
 
