@@ -1,13 +1,11 @@
 ---
 name: geo-prospect
 description: >
-  CRM-lite for managing GEO agency prospects and clients. Track leads through
-  the full sales pipeline: Lead → Qualified → Proposal Sent → Won → Lost.
-  Store audit history, notes, deal values, and generate pipeline summaries.
-  Use when user says "prospect", "lead", "client", "pipeline", "crm", "nuovo prospect",
-  "aggiungi cliente", or when managing the business side of GEO services.
-version: 1.0.0
-tags: [geo, business, crm, prospect, pipeline, sales]
+  Commercial prospect and client CRM for the GEO agency pipeline. Track discovery,
+  qualification, proposal, won/lost outcomes, observed AI visibility, opportunity
+  value, contacts, competitors, target queries, and next actions.
+version: 2.0.0
+tags: [geo, business, crm, prospect, pipeline, sales, ai-visibility]
 allowed-tools: Read, Write, Bash, Glob
 ---
 
@@ -15,179 +13,186 @@ allowed-tools: Read, Write, Bash, Glob
 
 ## Purpose
 
-Manage GEO agency prospects and clients through the full sales lifecycle.
-All data is stored in `~/.geo-prospects/prospects.json` (persistent across sessions).
+Manage prospects and clients through the commercial lifecycle while preserving the
+existing JSON CRM. The canonical field model is documented in
+`scripts/commercial_prospect.py`.
 
----
+The CRM is operational state, not evidence. AI visibility fields must retain
+provenance and must never imply observed performance when only readiness,
+estimates, or projections exist.
+
+## Pipeline
+
+`lead → qualified → proposal → won`
+
+`lost` is a terminal outcome that retains the loss reason for future analysis.
 
 ## Commands
 
 | Command | What It Does |
-|---------|-------------|
-| `/geo prospect new <domain>` | Create new prospect (interactive prompts) |
-| `/geo prospect list` | Show all prospects with pipeline status |
-| `/geo prospect list <status>` | Filter: lead, qualified, proposal, won, lost |
-| `/geo prospect show <id-or-domain>` | Full prospect detail with history |
-| `/geo prospect audit <id-or-domain>` | Run quick GEO audit and save to prospect record |
-| `/geo prospect note <id-or-domain> "<text>"` | Add interaction note with timestamp |
-| `/geo prospect status <id-or-domain> <new-status>` | Move through pipeline |
-| `/geo prospect won <id-or-domain> <monthly-value>` | Mark as won, set contract value |
-| `/geo prospect lost <id-or-domain> "<reason>"` | Mark as lost with reason |
-| `/geo prospect pipeline` | Visual pipeline summary with revenue forecast |
+|---|---|
+| `/geo prospect new <domain>` | Create a prospect with commercial discovery fields |
+| `/geo prospect list` | Show pipeline and commercial metrics |
+| `/geo prospect show <id-or-domain>` | Show complete prospect record and history |
+| `/geo prospect audit <id-or-domain>` | Run readiness audit and save evidence |
+| `/geo prospect note <id-or-domain> "<text>"` | Add dated interaction note |
+| `/geo prospect status <id-or-domain> <status>` | Advance or close pipeline stage |
+| `/geo prospect won <id-or-domain> <monthly-value>` | Mark won and set recurring value |
+| `/geo prospect lost <id-or-domain> "<reason>"` | Mark lost and retain reason |
+| `/geo prospect pipeline` | Revenue-weighted pipeline summary |
 
----
+## Canonical data model
 
-## Data Structure
-
-Each prospect is stored as a JSON record:
+New records should support these fields in addition to all existing legacy fields:
 
 ```json
 {
   "id": "PRO-001",
-  "company": "Electron Srl",
-  "domain": "electron-srl.com",
-  "contact_email": "info@electron-srl.com",
+  "company": "Example AS",
+  "domain": "example.no",
+  "status": "lead",
+  "country": "Norway",
+  "region": "Oslo",
+  "city": "Oslo",
+  "industry": "Plumbing",
+  "lead_source": "google_maps",
+  "acquisition_channel": "outbound",
   "contact_name": "",
-  "industry": "Educational Equipment Manufacturing",
-  "country": "Italy",
-  "status": "qualified",
-  "geo_score": 32,
-  "audit_date": "2026-03-12",
-  "audit_file": "~/.geo-prospects/audits/electron-srl.com-2026-03-12.md",
-  "proposal_file": "~/.geo-prospects/proposals/electron-srl.com-proposal.md",
-  "monthly_value": 0,
-  "contract_start": null,
-  "contract_months": 0,
-  "notes": [
-    {
-      "date": "2026-03-12",
-      "text": "Initial GEO quick scan. Score 32/100 - Critical tier. Strong candidate for GEO services."
-    }
-  ],
-  "created_at": "2026-03-12",
-  "updated_at": "2026-03-12"
+  "contact_email": "",
+  "contact_role": "",
+  "target_queries": [],
+  "competitor_domains": [],
+  "geo_score": null,
+  "ai_visibility_score": null,
+  "ai_share_of_voice": null,
+  "recommendation_rate": null,
+  "citation_rate": null,
+  "mention_rate": null,
+  "local_intent_coverage": null,
+  "competitor_gap": null,
+  "opportunity_value_monthly": null,
+  "opportunity_value_annual": null,
+  "monthly_value": null,
+  "probability": null,
+  "next_action": "Run discovery audit",
+  "next_action_at": null,
+  "audit_date": null,
+  "benchmark_date": null,
+  "implementation_status": null,
+  "provenance": {},
+  "notes": [],
+  "created_at": null,
+  "updated_at": null
 }
 ```
 
----
+### Field semantics
 
-## Orchestration Instructions
+- `geo_score`: existing diagnostic/readiness score. Never substitute for observed AI visibility.
+- `ai_visibility_score`: observed composite only when a defined benchmark exists.
+- `ai_share_of_voice`: derived from consistently counted observed competitive mentions.
+- `recommendation_rate`, `citation_rate`, `mention_rate`, `local_intent_coverage`: observed benchmark metrics.
+- `competitor_gap`: percentage-point difference between target and named competitor metric.
+- `target_queries`: canonical query set to benchmark; preserve exact query text.
+- `competitor_domains`: explicit competitive set used for comparison.
+- `lead_source` / `acquisition_channel`: acquisition attribution, not inferred unless known.
+- `opportunity_value_monthly`: potential recurring value before probability weighting.
+- `opportunity_value_annual`: monthly opportunity × 12.
+- `monthly_value`: contracted recurring revenue for won clients.
+- `probability`: explicit 0–1 close probability used for weighted pipeline reporting.
+- `next_action` / `next_action_at`: operational follow-up state.
+- `implementation_status`: delivery state after a deal is won.
+- `provenance`: per-metric evidence classification using `observed`, `derived`, `estimated`, `benchmark`, or `projected`.
 
-### `/geo prospect new <domain>`
+Unknown values are `null`; do not manufacture zeros for unavailable measurements.
 
-1. Check if `~/.geo-prospects/prospects.json` exists, create if not (empty array)
-2. Auto-detect company name from domain (e.g., `electron-srl.com` → `Electron Srl`)
-3. Assign next sequential ID: `PRO-001`, `PRO-002`, etc.
-4. Ask user for:
-   - Contact name (optional)
-   - Contact email
-   - Monthly contract value estimate (optional)
-5. Set status to `lead`
-6. Save to JSON file
-7. Suggest next step: "Run `/geo prospect audit electron-srl.com` to score this prospect"
+## `/geo prospect new <domain>`
 
-### `/geo prospect list`
+1. Create `~/.geo-prospects/prospects.json` if absent.
+2. Detect a provisional company name from the domain.
+3. Assign the next sequential ID.
+4. Capture optional contact information, country/region/city, industry, lead source,
+   acquisition channel, target queries, competitors, and opportunity value.
+5. Set `status=lead` and a concrete `next_action`.
+6. Do not invent contact or financial information.
+7. Save the record and suggest the audit/benchmark next step.
 
-Read `~/.geo-prospects/prospects.json` and render a summary table:
+## `/geo prospect audit <id-or-domain>`
 
-```
-GEO Prospect Pipeline — March 2026
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Run `/geo quick <domain>`.
+2. Save the existing `geo_score` and audit evidence.
+3. Do not populate AI visibility metrics unless actual benchmark evidence exists.
+4. Add/update provenance for any populated commercial metric.
+5. If the readiness score indicates an opportunity, use it as a diagnostic sales signal,
+   not proof of lost AI traffic or revenue.
 
-ID       Domain                  Company           Status      Score  Value
-───────  ──────────────────────  ────────────────  ──────────  ─────  ──────
-PRO-001  electron-srl.com        Electron Srl      Qualified   32/100  €4.5K
-PRO-002  acme.com                ACME Corp         Lead        —       —
-PRO-003  bigshop.it              BigShop           Won         41/100  €6.0K
+## Qualification
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Pipeline: 1 lead | 1 qualified | 0 proposals | 1 won | 0 lost
-Committed MRR: €6,000 | Pipeline Value: €4,500
-```
+A prospect may move to `qualified` when there is evidence of a commercial opportunity,
+for example a readiness gap, a defined target market, a relevant query set, or observed
+AI visibility/competitive gap. Record the evidence in notes rather than relying on score
+thresholds alone.
 
-### `/geo prospect audit <id-or-domain>`
+Recommended qualification fields:
 
-1. Run `/geo quick <domain>` to get GEO snapshot score
-2. Save score to prospect record: `geo_score`, `audit_date`
-3. Save audit output to `~/.geo-prospects/audits/<domain>-<date>.md`
-4. Update `audit_file` path in prospect record
-5. Add auto-note: "Quick audit run. GEO Score: XX/100."
-6. If score < 55: suggest "Score indicates strong sales opportunity. Run `/geo proposal <domain>` to generate proposal."
+- ICP/industry fit
+- geography and local intent
+- target query set
+- competitor set
+- readiness findings
+- observed AI benchmark, if available
+- commercial opportunity estimate and its assumptions
+- decision-maker/contact status
+- next action and date
 
-### `/geo prospect note <id-or-domain> "<text>"`
+## Pipeline valuation
 
-1. Find prospect by ID or domain
-2. Append note with current ISO date
-3. Save back to JSON
-4. Confirm: "Note added to Electron Srl (PRO-001)"
+For each open prospect:
 
-### `/geo prospect status <id-or-domain> <status>`
+`weighted_monthly_pipeline = opportunity_value_monthly × probability`
 
-Valid statuses: `lead`, `qualified`, `proposal`, `won`, `lost`
+For recurring revenue:
 
-1. Update status field
-2. Add auto-note: "Status changed to <status>"
-3. Save and confirm
+`annual_recurring_value = monthly_value × 12`
 
-### `/geo prospect pipeline`
+For opportunity scenarios, expected annual value may be represented as:
 
-Visual revenue-focused pipeline summary:
+`expected_annual_value = Δp × annual_financial_impact`
 
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GEO AGENCY PIPELINE SUMMARY — March 2026
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+where `Δp` and financial impact are explicit assumptions or observed/derived inputs.
+This is an analytical scenario, not an ROI guarantee.
 
-STAGE          COUNT   POTENTIAL VALUE   NOTES
-─────────────  ─────   ───────────────   ─────────────────────
-Lead             2      €8,000/mo        New discoveries
-Qualified        1      €4,500/mo        Ready for proposal
-Proposal Sent    1      €6,000/mo        Awaiting signature
-Won              3      €18,500/mo       Active clients (MRR)
-Lost             1      —                Budget freeze
+The implementation in `scripts/commercial_prospect.py` performs deterministic validation
+and calculation of these values.
 
-COMMITTED MRR:        €18,500
-PIPELINE (qualified+): €10,500
-TOTAL POTENTIAL:      €29,000/mo → €348,000/yr
+## Pipeline output
 
-Next actions:
-→ PRO-003 (acme.com): Send proposal — score 38/100 (strong case)
-→ PRO-007 (shop.it): Follow up — proposal sent 8 days ago
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+Show, at minimum:
 
----
+- count by stage
+- committed MRR from `won`
+- unweighted pipeline MRR from open opportunities
+- probability-weighted pipeline MRR
+- annualized committed revenue
+- prospects requiring a next action
+- top opportunities by weighted value
 
-## Storage Location
+Do not display missing values as zero unless zero is explicitly recorded.
 
-All data stored in `~/.geo-prospects/`:
-```
+## Backward compatibility
+
+Existing fields such as `id`, `company`, `domain`, `status`, `geo_score`, `monthly_value`,
+`notes`, audit paths, proposal paths, and timestamps remain valid. Legacy records are
+normalized with safe defaults by `normalize_prospect()`.
+
+## Storage
+
+```text
 ~/.geo-prospects/
-├── prospects.json          # Main CRM database
-├── audits/                 # Quick audit snapshots
-│   └── electron-srl.com-2026-03-12.md
-└── proposals/              # Generated proposals
-    └── electron-srl.com-proposal.md
+├── prospects.json
+├── audits/
+└── proposals/
 ```
 
-Create directory if it does not exist: `mkdir -p ~/.geo-prospects/audits ~/.geo-prospects/proposals`
-
----
-
-## Pipeline Stage Definitions
-
-| Status | Meaning | Typical Next Action |
-|--------|---------|---------------------|
-| `lead` | Discovered, not yet contacted | Run quick audit, assess opportunity |
-| `qualified` | Audit done, confirmed pain points | Generate proposal |
-| `proposal` | Proposal sent, awaiting decision | Follow up, answer questions |
-| `won` | Contract signed, active client | Run full audit, start onboarding |
-| `lost` | Deal closed lost | Log reason for future reference |
-
----
-
-## Output
-
-- All commands print confirmation + current prospect status to terminal
-- No external files unless explicitly saving audits/proposals
-- JSON database is the single source of truth
+The JSON database remains the single source of truth for this stage. A database/API layer
+is intentionally deferred until later architecture work.
