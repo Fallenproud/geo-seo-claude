@@ -1,1 +1,0 @@
-PR-2 implementation status: commercial prospect model, documentation, and tests are present on the PR-2 branch.
