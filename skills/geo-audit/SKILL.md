@@ -90,7 +90,7 @@ Delegate analysis to 5 specialized subagents. Each subagent operates on the coll
 - Analyze content blocks for quotability by AI systems (citability scoring)
 - Check AI crawler access via robots.txt and llms.txt presence
 - Scan brand presence across YouTube, Reddit, Wikipedia, LinkedIn
-- Score brand authority signals that AI models use for entity recognition
+- Score brand authority signals that AI systems use for entity recognition
 
 **Subagent 2: Platform Optimization (geo-platform-analysis)**
 - Assess readiness for Google AI Overviews, ChatGPT, Perplexity, Gemini, Bing Copilot
@@ -123,7 +123,7 @@ Delegate analysis to 5 specialized subagents. Each subagent operates on the coll
 The overall GEO Score (0-100) is a weighted average of six category scores:
 
 | Category | Weight | What It Measures |
-|---|---|---|
+|---|---:|---|
 | **AI Citability** | 25% | How quotable/extractable content is for AI systems |
 | **Brand Authority** | 20% | Third-party mentions, entity recognition signals |
 | **Content E-E-A-T** | 20% | Experience, Expertise, Authoritativeness, Trustworthiness |
@@ -145,6 +145,38 @@ GEO_Score = (Citability * 0.25) + (Brand * 0.20) + (EEAT * 0.20) + (Technical * 
 | 60-74 | Fair | Moderate GEO presence; significant optimization opportunities exist |
 | 40-59 | Poor | Weak GEO signals; AI systems may struggle to cite or recommend |
 | 0-39 | Critical | Minimal GEO optimization; site is largely invisible to AI systems |
+
+### Commercial AI Visibility Metrics v2
+
+The GEO Score above remains the **readiness/diagnostic score** and is backward-compatible with existing reports. It must not be presented as observed AI performance.
+
+When a benchmark contains actual AI query outcomes, add the separate measurement layer defined in `scripts/ai_visibility_metrics.py`:
+
+| Metric | Definition | Provenance |
+|---|---|---|
+| Recommendation Rate | Eligible queries where the target is recommended / eligible queries | observed |
+| Mention Rate | Eligible queries where the target is mentioned / eligible queries | observed |
+| Citation Rate | Eligible queries where the target is cited / eligible queries | observed |
+| AI Share of Voice | Target competitive mentions / total competitive mentions under the same counting rule | derived |
+| Entity Recognition Rate | Eligible queries with unambiguous target entity recognition / eligible queries | observed |
+| Local Intent Coverage | Covered local-intent queries / local-intent queries | observed |
+| Competitor Gap | Target rate minus competitor rate, in percentage points | derived |
+
+**Provenance is mandatory for commercial metrics:**
+- `observed` — directly measured from an AI query run or other captured evidence.
+- `derived` — deterministic calculation from observed values.
+- `estimated` — model/analyst estimate; never present as measured fact.
+- `benchmark` — external comparison dataset.
+- `projected` — forward-looking scenario or forecast.
+
+**Confidence is a sample-size label, not statistical significance:**
+- `high` = 50+ eligible queries
+- `medium` = 20–49
+- `low` = under 20
+
+If a denominator is zero or required observation data is absent, return `null`/unknown rather than zero. A zero means a measured absence; unknown means it was not measurable.
+
+**Important:** PR-1 defines the canonical metrics and semantics. It does not claim that the current audit can observe ChatGPT, Perplexity, Gemini, or other AI responses. Direct query benchmarking and share-of-voice collection are implemented in later benchmark PRs.
 
 ---
 
@@ -217,6 +249,19 @@ Generate a file called `GEO-AUDIT-REPORT.md` with the following structure:
 | Schema & Structured Data | [X]/100 | 10% | [X] |
 | Platform Optimization | [X]/100 | 10% | [X] |
 | **Overall GEO Score** | | | **[X]/100** |
+
+### AI Visibility Measurement (when benchmark data exists)
+
+| Metric | Value | Provenance | Confidence | Sample |
+|---|---:|---|---|---:|
+| Recommendation Rate | [X]% | observed | [high/medium/low] | [N] |
+| Mention Rate | [X]% | observed | [high/medium/low] | [N] |
+| Citation Rate | [X]% | observed | [high/medium/low] | [N] |
+| AI Share of Voice | [X]% | derived | [high/medium/low] | [N] |
+| Entity Recognition Rate | [X]% | observed | [high/medium/low] | [N] |
+| Local Intent Coverage | [X]% | observed | [high/medium/low] | [N] |
+
+If no benchmark exists, omit the table rather than displaying zeros.
 
 ---
 
